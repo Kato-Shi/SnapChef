@@ -1,5 +1,12 @@
 @import "tailwindcss";
 
+dialog.recipe-modal { margin:auto; padding:0; border:0; color:var(--ink); width:min(880px,calc(100% - 24px)); max-height:90dvh; }
+dialog.recipe-modal::backdrop { background:rgba(11,19,13,.7); backdrop-filter:blur(5px); }
+body { padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
+.ingredient-field input { min-width:0; }
+button.ingredient-chip, .photo-actions button, button.modal-close { min-height:44px; min-width:44px; }
+@media (prefers-reduced-motion:reduce) { html { scroll-behavior:auto; } *, *::before, *::after { transition:none !important; animation:none !important; } }
+
 :root { --ink:#18251b; --cream:#f5f0e5; --paper:#fffdf7; --tomato:#e55236; --sage:#a7b69e; --line:rgba(24,37,27,.18); }
 * { box-sizing:border-box; }
 html { scroll-behavior:smooth; }

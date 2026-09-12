@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">SnapChef</string>
+    <string name="title_activity_main">SnapChef</string>
+    <string name="package_name">com.katoshi.snapchef</string>
+    <string name="custom_url_scheme">com.katoshi.snapchef</string>
+</resources>
