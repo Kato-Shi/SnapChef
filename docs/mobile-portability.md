@@ -39,7 +39,7 @@ Current gaps:
 - No PWA manifest, service worker, install flow, or offline strategy.
 - No Capacitor project or native platform configuration.
 - No native camera integration.
-- Ingredients, photos, and search state are not persisted.
+- Ingredients and saved recipes persist on the current device. Uploaded photos and temporary search filters do not persist.
 - No safe-area layout handling for notches and system bars.
 - Some controls and modal dimensions need mobile touch and viewport refinement.
 - Build scripts use Unix-style environment-variable syntax and are not portable to Windows without a workaround.

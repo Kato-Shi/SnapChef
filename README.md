@@ -5,6 +5,9 @@ SnapChef is a small recipe recommendation prototype that helps people cook with 
 ## Features
 
 - Add, normalize, and remove ingredients
+- Search every recipe by name, description, or ingredient
+- Browse Filipino, global, quick, vegetarian, seafood, soup-and-stew, and saved categories
+- Save favorite recipes privately on the current device
 - Upload and preview JPG or PNG food photos
 - Mock image analysis that returns editable detected ingredients
 - Rank recipes by exact ingredient-match percentage

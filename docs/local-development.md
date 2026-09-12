@@ -18,7 +18,9 @@ For Android browser testing, connect the phone and laptop to the same trusted Wi
 
 Both entries use `components/snapchef/SnapChefApp.tsx`, the same recipe data and matching logic. Ingredients persist in browser localStorage per origin; photos are session-only and never uploaded. Storage failures show a message. Photo selection accepts JPEG/PNG up to 10 MiB. Recipe dialogs use native browser focus containment and Escape handling. Safe-area padding, reduced-motion CSS, and larger touch targets are included.
 
-The local catalog now contains 94 recipes: 10 original entries updated toward Filipino preparations plus 84 researched Filipino classics and regional specialties. Research scope and sources are recorded in `docs/recipe-research.md`.
+The local catalog now contains 144 recipes: 94 Filipino-focused entries plus 50 familiar dishes from around the world. Research scope and sources are recorded in `docs/recipe-research.md` and `docs/world-recipe-research.md`.
+
+Recipe discovery supports instant text search across names, descriptions, and ingredients; Filipino, global, quick, vegetarian, seafood, soup-and-stew, and saved-recipe categories; ingredient match ranking; device-local favorites; and a clear-all kitchen control. These features share the same component in browser and Android builds.
 
 ## Deliberately not enabled
 

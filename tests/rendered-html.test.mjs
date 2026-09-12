@@ -23,5 +23,8 @@ test("server-renders the SnapChef experience", async () => {
   assert.match(html, /What’s in your kitchen\?/);
   assert.match(html, /Find my recipes/);
   assert.match(html, /Upload a kitchen photo/);
+  assert.match(html, /Search recipes or ingredients/);
+  assert.match(html, /Vegetarian/);
+  assert.match(html, /Saved/);
   assert.doesNotMatch(html, /codex-preview|Building your site|react-loading-skeleton/i);
 });
