@@ -9,6 +9,7 @@ export type Recipe = {
 };
 
 import { filipinoRecipes } from "./filipino-recipes";
+import { worldRecipes } from "./world-recipes";
 
 export const recipes: Recipe[] = [
   {
@@ -102,4 +103,5 @@ export const recipes: Recipe[] = [
     accent: "#668557",
   },
   ...filipinoRecipes,
+  ...worldRecipes,
 ];
