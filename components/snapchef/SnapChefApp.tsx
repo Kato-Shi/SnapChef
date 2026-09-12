@@ -152,8 +152,14 @@ export default function Home() {
           <input id="recipe-search" type="search" value={recipeQuery} onChange={(event) => setRecipeQuery(event.target.value)} placeholder="Search recipes or ingredients…" />
           {recipeQuery && <button type="button" onClick={() => setRecipeQuery("")} aria-label="Clear recipe search">×</button>}
         </div>
-        <div className="category-list" aria-label="Recipe categories">
-          {categories.map((item) => <button key={item} type="button" className={category === item ? "active" : ""} aria-pressed={category === item} onClick={() => setCategory(item)}>{item}{item === "Saved" && favorites.size > 0 ? ` ${favorites.size}` : ""}</button>)}
+        <div className="category-picker">
+          <label htmlFor="recipe-category">Category</label>
+          <div className="select-shell">
+            <select id="recipe-category" value={category} onChange={(event) => setCategory(event.target.value as Category)}>
+              {categories.map((item) => <option key={item} value={item}>{item}{item === "Saved" && favorites.size > 0 ? ` (${favorites.size})` : ""}</option>)}
+            </select>
+            <span aria-hidden="true">⌄</span>
+          </div>
         </div>
       </section>
 

@@ -45,6 +45,8 @@ node --test tests/rendered-html.test.mjs
 - `app/lib/image-analyzer.ts` — replaceable mock image analyzer
 - `app/globals.css` — responsive visual design
 
+Product and platform changes are recorded in [`CHANGELOG.md`](CHANGELOG.md).
+
 ## Mobile portability
 
 The confirmed browser-and-mobile architecture, compatibility rules, staged implementation plan, validation matrix, and decision log are documented in [`docs/mobile-portability.md`](docs/mobile-portability.md).
