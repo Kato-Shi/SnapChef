@@ -2,6 +2,14 @@
 
 All notable product, recipe-catalog, platform, build, and deployment changes are recorded here.
 
+## 2026-09-13 — Detailed recipe guidance
+
+- Added practical four-serving quantities and preparation notes to every recipe through a shared detail layer.
+- Expanded each recipe from its concise core method into a detailed sequence covering setup, preparation, heat control, timing, texture checks, seasoning, finishing, serving, and storage.
+- Added servings, preparation time, cooking time, difficulty, required equipment, and visible doneness guidance to the recipe view.
+- Added protein-specific minimum-temperature cues based on current USDA food-safety guidance.
+- Preserved the original ingredient names used by pantry matching, search, categories, and favorites.
+
 ## 2026-09-13 — Category dropdown
 
 - Replaced the horizontally scrolling category buttons with one labeled native dropdown.

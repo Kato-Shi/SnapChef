@@ -13,6 +13,7 @@ SnapChef is a small recipe recommendation prototype that helps people cook with 
 - Rank recipes by exact ingredient-match percentage
 - Show matched and missing ingredients
 - Open complete recipe ingredients and instructions
+- Follow measured four-serving ingredient guides, expanded methods, equipment lists, and doneness cues
 - Responsive, accessible single-page interface
 
 ## Important limitation

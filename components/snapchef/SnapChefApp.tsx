@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ChangeEvent, FormEvent, KeyboardEvent, MouseEvent } from "react";
 import { analyzeFoodImage } from "../../app/lib/image-analyzer";
+import { getRecipeDetails } from "../../app/lib/recipe-details";
 import { rankRecipes, normalizeIngredient, type RecipeMatch } from "../../app/lib/recipe-matcher";
 import { recipes } from "../../app/lib/recipes";
 import { worldRecipes } from "../../app/lib/world-recipes";
@@ -91,6 +92,7 @@ export default function Home() {
     });
   }, [rankedRecipes, recipeQuery, category, favorites]);
   const isBrowsing = hasSearched || recipeQuery.trim().length > 0 || category !== "All";
+  const selectedDetails = useMemo(() => selectedRecipe ? getRecipeDetails(selectedRecipe) : null, [selectedRecipe]);
 
   const addIngredient = (value = input) => {
     const normalized = normalizeIngredient(value);
@@ -218,11 +220,29 @@ export default function Home() {
         </section>
       )}
 
-      {selectedRecipe && (
+      {selectedRecipe && selectedDetails && (
         <dialog ref={dialogRef} className="recipe-modal" aria-labelledby="recipe-title" onCancel={() => setSelectedRecipe(null)}>
           <button type="button" className="modal-close" onClick={() => setSelectedRecipe(null)} aria-label="Close recipe">×</button>
-          <div className="modal-intro" style={{ borderColor: selectedRecipe.accent }}><p className="eyebrow">{ingredients.length ? `${selectedRecipe.matchPercentage}% match · ` : ""}{selectedRecipe.cookingTime}</p><h2 id="recipe-title">{selectedRecipe.name}</h2><p>{selectedRecipe.description}</p><button type="button" className={`modal-save ${favorites.has(selectedRecipe.id) ? "saved" : ""}`} aria-pressed={favorites.has(selectedRecipe.id)} onClick={() => toggleFavorite(selectedRecipe.id)}>{favorites.has(selectedRecipe.id) ? "♥ Saved" : "♡ Save recipe"}</button></div>
-          <div className="recipe-detail-grid"><section><p className="eyebrow">Ingredients</p><ul>{selectedRecipe.ingredients.map((item) => <li key={item} className={selectedRecipe.matchedIngredients.includes(item) ? "have" : "need"}><span>{selectedRecipe.matchedIngredients.includes(item) ? "✓" : "○"}</span>{item}</li>)}</ul></section><section><p className="eyebrow">Method</p><ol>{selectedRecipe.instructions.map((step, index) => <li key={step}><span>{index + 1}</span><p>{step}</p></li>)}</ol></section></div>
+          <div className="modal-intro" style={{ borderColor: selectedRecipe.accent }}>
+            <p className="eyebrow">{ingredients.length ? `${selectedRecipe.matchPercentage}% match · ` : ""}{selectedRecipe.cookingTime}</p>
+            <h2 id="recipe-title">{selectedRecipe.name}</h2>
+            <p>{selectedRecipe.description}</p>
+            <div className="recipe-facts" aria-label="Recipe information"><span><small>Serves</small><strong>{selectedDetails.servings}</strong></span><span><small>Prep</small><strong>{selectedDetails.prepTime}</strong></span><span><small>Cook</small><strong>{selectedRecipe.cookingTime}</strong></span><span><small>Level</small><strong>{selectedDetails.difficulty}</strong></span></div>
+            <button type="button" className={`modal-save ${favorites.has(selectedRecipe.id) ? "saved" : ""}`} aria-pressed={favorites.has(selectedRecipe.id)} onClick={() => toggleFavorite(selectedRecipe.id)}>{favorites.has(selectedRecipe.id) ? "♥ Saved" : "♡ Save recipe"}</button>
+          </div>
+          <div className="recipe-guide-note"><strong>Four-serving guide</strong><p>{selectedDetails.cookNote}</p></div>
+          <div className="recipe-detail-grid">
+            <section>
+              <p className="eyebrow">Measured ingredients</p>
+              <ul className="measured-ingredients">{selectedDetails.ingredients.map((ingredient) => <li key={ingredient.item} className={selectedRecipe.matchedIngredients.includes(ingredient.item) ? "have" : "need"}><span>{selectedRecipe.matchedIngredients.includes(ingredient.item) ? "✓" : "○"}</span><div><strong>{ingredient.amount}</strong><p>{ingredient.item}</p>{ingredient.preparation && <small>{ingredient.preparation}</small>}</div></li>)}</ul>
+              <div className="equipment-list"><p className="eyebrow">Equipment</p><ul>{selectedDetails.equipment.map((item) => <li key={item}>{item}</li>)}</ul></div>
+            </section>
+            <section>
+              <p className="eyebrow">Detailed method</p>
+              <ol>{selectedDetails.steps.map((step, index) => <li key={`${index}-${step}`}><span>{index + 1}</span><p>{step}</p></li>)}</ol>
+              {selectedDetails.safetyNote && <aside className="safety-note"><strong>Doneness check</strong><p>{selectedDetails.safetyNote}</p></aside>}
+            </section>
+          </div>
         </dialog>
       )}
     </main>
