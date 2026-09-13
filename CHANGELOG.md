@@ -2,6 +2,13 @@
 
 All notable product, recipe-catalog, platform, build, and deployment changes are recorded here.
 
+## 2026-09-13 — Expanded popular global cuisines
+
+- Added 30 home-cookable dishes across Asian, Indian, American, Italian, Spanish, and Mexican cuisines.
+- Added five distinct recipes per cuisine while avoiding dishes already represented in the catalog.
+- Integrated every dish with search, filters, pantry matching, serving adjustment, shopping lists, favorites, history, and Cooking Mode.
+- Documented the selection scope and research basis in `docs/expanded-global-cuisines.md`.
+
 ## 2026-09-13 — Simple shopping list
 
 - Added a compact shopping-list panel accessible from the site header.

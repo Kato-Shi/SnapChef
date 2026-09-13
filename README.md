@@ -7,6 +7,7 @@ SnapChef is a small recipe recommendation prototype that helps people cook with 
 - Add, normalize, and remove ingredients
 - Search every recipe by name, description, or ingredient
 - Browse Filipino, global, quick, vegetarian, seafood, soup-and-stew, and saved categories
+- Explore expanded Asian, Indian, American, Italian, Spanish, and Mexican favorites
 - Save favorite recipes privately on the current device
 - Revisit recently viewed recipes and see which dishes were cooked
 - Keep a simple device-local shopping list and add missing recipe ingredients in one action
