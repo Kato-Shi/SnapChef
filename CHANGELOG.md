@@ -2,6 +2,23 @@
 
 All notable product, recipe-catalog, platform, build, and deployment changes are recorded here.
 
+## 2026-09-13 — Cooking tools, filters, and history
+
+- Added a full-screen cooking mode with step progress, large instructions, previous/next controls, and a completion action.
+- Added 1–12 serving adjustment with live scaling of measured ingredient quantities.
+- Added cooking-time, difficulty, and “I have everything” filters with one-action reset.
+- Added a device-local Recent category for the 20 latest viewed recipes and visible cooked status.
+- Kept all additions shared between the browser and Android builds without requiring an account or paid backend.
+- Published the prototype with dish recognition visibly marked as coming soon and submission disabled until its API key and spending controls are configured.
+
+## 2026-09-13 — Cost-controlled dish recognition
+
+- Replaced the sample ingredient mock with real prepared-dish identification through a server-side OpenAI Responses API endpoint.
+- Added one confident match or up to three ranked alternatives, with concise reasoning and detected ingredients fed into recipe matching.
+- Added client-side resizing, low-detail analysis, structured output, validation, graceful failures, and a best-effort hourly rate limit.
+- Kept the API key out of browser and Android bundles and documented local, hosted, and Android configuration in `docs/image-recognition.md`.
+- Preserved manual ingredient entry and recipe browsing when the service is unavailable.
+
 ## 2026-09-13 — Detailed recipe guidance
 
 - Added practical four-serving quantities and preparation notes to every recipe through a shared detail layer.

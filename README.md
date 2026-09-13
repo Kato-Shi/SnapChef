@@ -8,17 +8,20 @@ SnapChef is a small recipe recommendation prototype that helps people cook with 
 - Search every recipe by name, description, or ingredient
 - Browse Filipino, global, quick, vegetarian, seafood, soup-and-stew, and saved categories
 - Save favorite recipes privately on the current device
+- Revisit recently viewed recipes and see which dishes were cooked
+- Filter by time, difficulty, and recipes possible with current ingredients
 - Upload and preview JPG or PNG food photos
-- Mock image analysis that returns editable detected ingredients
+- Cost-controlled dish recognition with ranked alternatives and editable detected ingredients
 - Rank recipes by exact ingredient-match percentage
 - Show matched and missing ingredients
 - Open complete recipe ingredients and instructions
 - Follow measured four-serving ingredient guides, expanded methods, equipment lists, and doneness cues
+- Scale ingredient quantities from 1–12 servings and follow a focused step-by-step cooking mode
 - Responsive, accessible single-page interface
 
-## Important limitation
+## Image recognition
 
-Image recognition is intentionally mocked for this MVP. `analyzeFoodImage()` returns sample ingredients (`egg`, `tomato`, and `onion`) without using an external AI service or API key. The analyzer is separate from the UI and recipe-matching code so it can be replaced later.
+Real image recognition is available when a server-side `OPENAI_API_KEY` is configured. Setup, privacy behavior, mobile configuration, safeguards, and cost controls are documented in [`docs/image-recognition.md`](docs/image-recognition.md). Manual recipe search remains usable without an API key.
 
 ## Run locally
 
@@ -43,7 +46,8 @@ node --test tests/rendered-html.test.mjs
 - `app/page.tsx` — user interface and interactions
 - `app/lib/recipes.ts` — sample recipe data
 - `app/lib/recipe-matcher.ts` — normalization and ranking
-- `app/lib/image-analyzer.ts` — replaceable mock image analyzer
+- `app/lib/image-analyzer.ts` — client-side resizing and image-analysis client
+- `worker/index.ts` — protected server-side image-analysis endpoint
 - `app/globals.css` — responsive visual design
 
 Product and platform changes are recorded in [`CHANGELOG.md`](CHANGELOG.md).

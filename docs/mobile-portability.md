@@ -4,7 +4,7 @@ Status: Step 2 architecture approved and documented on 2026-08-25.
 
 Update 2026-09-12: The user subsequently authorized autonomous local implementation, with image integration excluded. The historical confirmation gates below no longer require approval for each local coding step. See [local development](local-development.md) for implemented capabilities and remaining work. Vercel and Supabase are under consideration; the historical Cloudflare backend choice below is not a newly confirmed final hosting decision. No backend migration or public deployment has been performed.
 
-Implementation note: Steps 3–5 are complete through the generated Android project and web-asset synchronization. The static build is installable/offline-capable where the browser accepts SVG manifest icons. Final APK compilation is waiting on an Android SDK installation. Native camera/Preferences plugins and image recognition remain intentionally unimplemented.
+Implementation note: Steps 3–5 are complete through the generated Android project and web-asset synchronization. The static build is installable/offline-capable where the browser accepts SVG manifest icons. Final APK compilation is waiting on an Android SDK installation. Native camera/Preferences plugins remain unimplemented. Image recognition is implemented through a hosted endpoint and requires the configuration described in `docs/image-recognition.md`.
 
 ## Objective
 
@@ -24,7 +24,7 @@ Capacitor is designed to be added to existing modern web projects and provides w
 
 ## Current baseline
 
-SnapChef is a Vinext React application hosted through Cloudflare Sites. The primary screen is client-side React, while metadata and hosting are server-rendered. Recipe data and matching are local TypeScript modules. Image analysis is mocked. D1 and R2 are not enabled.
+SnapChef is a Vinext React application hosted through Cloudflare Sites. The primary screen is client-side React, while metadata and hosting are server-rendered. Recipe data and matching are local TypeScript modules. Image analysis uses an optional server-side OpenAI endpoint; manual matching continues to work without it. D1 and R2 are not enabled.
 
 Current strengths:
 
@@ -40,6 +40,7 @@ Current gaps:
 - No Capacitor project or native platform configuration.
 - No native camera integration.
 - Ingredients and saved recipes persist on the current device. Uploaded photos and temporary search filters do not persist.
+- The 20 most recently viewed recipes and cooked status persist on the current device. Cooking progress and filter choices are session-only.
 - No safe-area layout handling for notches and system bars.
 - Some controls and modal dimensions need mobile touch and viewport refinement.
 - Build scripts use Unix-style environment-variable syntax and are not portable to Windows without a workaround.

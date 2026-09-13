@@ -27,5 +27,21 @@ test("server-renders the SnapChef experience", async () => {
   assert.match(html, /<select[^>]+id="recipe-category"/i);
   assert.match(html, /Vegetarian/);
   assert.match(html, /Saved/);
+  assert.match(html, /Recent/);
+  assert.match(html, /30 min or less/);
+  assert.match(html, /I have everything/);
   assert.doesNotMatch(html, /codex-preview|Building your site|react-loading-skeleton/i);
+});
+
+test("image analysis fails safely when its secret is not configured", async () => {
+  const workerUrl = new URL("../dist/server/index.js", import.meta.url);
+  workerUrl.searchParams.set("test", `${process.pid}-${Date.now()}-image`);
+  const { default: worker } = await import(workerUrl.href);
+  const response = await worker.fetch(
+    new Request("http://localhost/api/analyze-image", { method: "POST" }),
+    { ASSETS: { fetch: async () => new Response("Not found", { status: 404 }) } },
+    { waitUntil() {}, passThroughOnException() {} },
+  );
+  assert.equal(response.status, 503);
+  assert.deepEqual(await response.json(), { error: "Image recognition has not been configured yet." });
 });
