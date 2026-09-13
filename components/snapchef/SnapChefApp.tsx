@@ -15,6 +15,7 @@ type Category = (typeof categories)[number];
 type DifficultyFilter = "Any" | "Easy" | "Moderate" | "Advanced";
 type TimeFilter = "Any" | "30" | "60";
 type HistoryEntry = { id: string; viewedAt: number; cookedAt?: number };
+type ShoppingItem = { item: string; checked: boolean };
 const meatIngredients = ["beef", "pork", "chicken", "lamb", "fish", "shrimp", "mussels", "sausage", "bacon", "hotdog", "tuna", "sardines", "anchovy", "squid", "crab", "meat"];
 const seafoodIngredients = ["fish", "shrimp", "mussels", "tuna", "sardines", "anchovy", "squid", "crab", "seafood"];
 
@@ -53,6 +54,9 @@ export default function Home() {
   const [category, setCategory] = useState<Category>("All");
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [shoppingItems, setShoppingItems] = useState<ShoppingItem[]>([]);
+  const [shoppingInput, setShoppingInput] = useState("");
+  const [showShoppingList, setShowShoppingList] = useState(false);
   const [difficultyFilter, setDifficultyFilter] = useState<DifficultyFilter>("Any");
   const [timeFilter, setTimeFilter] = useState<TimeFilter>("Any");
   const [completeOnly, setCompleteOnly] = useState(false);
@@ -78,9 +82,11 @@ export default function Home() {
         const savedIngredients: unknown = JSON.parse(localStorage.getItem("snapchef.ingredients.v1") ?? "[]");
         const savedFavorites: unknown = JSON.parse(localStorage.getItem("snapchef.favorites.v1") ?? "[]");
         const savedHistory: unknown = JSON.parse(localStorage.getItem("snapchef.history.v1") ?? "[]");
+        const savedShopping: unknown = JSON.parse(localStorage.getItem("snapchef.shopping.v1") ?? "[]");
         if (Array.isArray(savedIngredients)) setIngredients(Array.from(new Set(savedIngredients.filter((item): item is string => typeof item === "string").map(normalizeIngredient).filter(Boolean))).slice(0, 200));
         if (Array.isArray(savedFavorites)) setFavorites(new Set(savedFavorites.filter((item): item is string => typeof item === "string")));
         if (Array.isArray(savedHistory)) setHistory(savedHistory.filter((item): item is HistoryEntry => Boolean(item && typeof item === "object" && typeof (item as HistoryEntry).id === "string" && typeof (item as HistoryEntry).viewedAt === "number")).slice(0, 20));
+        if (Array.isArray(savedShopping)) setShoppingItems(savedShopping.filter((entry): entry is ShoppingItem => Boolean(entry && typeof entry === "object" && typeof (entry as ShoppingItem).item === "string" && typeof (entry as ShoppingItem).checked === "boolean")).slice(0, 100));
       } catch { setNotice("Saved kitchen data could not be loaded. You can still start a new list."); }
       setLoaded(true);
     });
@@ -98,8 +104,9 @@ export default function Home() {
       localStorage.setItem("snapchef.ingredients.v1", JSON.stringify(ingredients));
       localStorage.setItem("snapchef.favorites.v1", JSON.stringify([...favorites]));
       localStorage.setItem("snapchef.history.v1", JSON.stringify(history));
+      localStorage.setItem("snapchef.shopping.v1", JSON.stringify(shoppingItems));
     } catch { queueMicrotask(() => setNotice("Storage is unavailable. Your kitchen data will last for this visit only.")); }
-  }, [ingredients, favorites, history, loaded]);
+  }, [ingredients, favorites, history, shoppingItems, loaded]);
 
   useEffect(() => {
     if (!selectedRecipe) return;
@@ -190,6 +197,18 @@ export default function Home() {
     setHistory((current) => [{ id: selectedRecipe.id, viewedAt: Date.now(), cookedAt: Date.now() }, ...current.filter((item) => item.id !== selectedRecipe.id)].slice(0, 20));
     setCookingStep(null); setNotice(`${selectedRecipe.name} marked as cooked.`);
   };
+  const addShoppingItems = (items: string[]) => {
+    setShoppingItems((current) => {
+      const existing = new Set(current.map((entry) => normalizeIngredient(entry.item)));
+      const additions = items.map(normalizeIngredient).filter((item) => item && !existing.has(item)).map((item) => ({ item, checked: false }));
+      return [...current, ...additions].slice(0, 100);
+    });
+  };
+  const submitShoppingItem = (event: FormEvent) => {
+    event.preventDefault();
+    if (!shoppingInput.trim()) return;
+    addShoppingItems([shoppingInput]); setShoppingInput("");
+  };
   const keyboardUpload = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.key === "Enter" || event.key === " ") { event.preventDefault(); fileInputRef.current?.click(); }
   };
@@ -198,7 +217,7 @@ export default function Home() {
     <main>
       <header className="site-header">
         <a className="brand" href="#top" aria-label="SnapChef home" onClick={() => { setRecipeQuery(""); setCategory("All"); setHasSearched(false); }}><span className="brand-mark">S</span><span>SnapChef</span></a>
-        <span className="prototype-label">Your pocket kitchen</span>
+        <div className="header-actions"><span className="prototype-label">Your pocket kitchen</span><button type="button" onClick={() => setShowShoppingList(true)}>Shopping list{shoppingItems.length ? ` (${shoppingItems.filter((item) => !item.checked).length})` : ""}</button></div>
       </header>
 
       <section className="discovery-bar" id="top" aria-label="Browse recipes">
@@ -291,6 +310,7 @@ export default function Home() {
             <div className="recipe-facts" aria-label="Recipe information"><span className="serving-control"><small>Serves</small><span><button type="button" onClick={() => setSelectedServings((value) => Math.max(1, value - 1))} aria-label="Decrease servings">−</button><strong>{selectedServings}</strong><button type="button" onClick={() => setSelectedServings((value) => Math.min(12, value + 1))} aria-label="Increase servings">+</button></span></span><span><small>Prep</small><strong>{selectedDetails.prepTime}</strong></span><span><small>Cook</small><strong>{selectedRecipe.cookingTime}</strong></span><span><small>Level</small><strong>{selectedDetails.difficulty}</strong></span></div>
             <button type="button" className={`modal-save ${favorites.has(selectedRecipe.id) ? "saved" : ""}`} aria-pressed={favorites.has(selectedRecipe.id)} onClick={() => toggleFavorite(selectedRecipe.id)}>{favorites.has(selectedRecipe.id) ? "♥ Saved" : "♡ Save recipe"}</button>
             <button type="button" className="start-cooking" onClick={() => setCookingStep(0)}>Start cooking mode →</button>
+            {selectedRecipe.missingIngredients.length > 0 && <button type="button" className="add-shopping" onClick={() => { addShoppingItems(selectedRecipe.missingIngredients); setShowShoppingList(true); }}>Add {selectedRecipe.missingIngredients.length} missing item{selectedRecipe.missingIngredients.length === 1 ? "" : "s"} to shopping list</button>}
           </div>
           <div className="recipe-guide-note"><strong>Four-serving guide</strong><p>{selectedDetails.cookNote}</p></div>
           <div className="recipe-detail-grid">
@@ -308,6 +328,8 @@ export default function Home() {
           {cookingStep !== null && <section className="cooking-mode" aria-label="Cooking mode"><button type="button" className="cooking-exit" onClick={() => setCookingStep(null)}>Exit</button><p className="eyebrow">Cooking {selectedRecipe.name}</p><div className="cooking-progress" aria-label={`Step ${cookingStep + 1} of ${selectedDetails.steps.length}`}><span style={{ width: `${((cookingStep + 1) / selectedDetails.steps.length) * 100}%` }} /></div><p className="cooking-count">Step {cookingStep + 1} of {selectedDetails.steps.length}</p><h3>{selectedDetails.steps[cookingStep]}</h3><div className="cooking-nav"><button type="button" disabled={cookingStep === 0} onClick={() => setCookingStep((step) => Math.max(0, (step ?? 0) - 1))}>← Previous</button>{cookingStep === selectedDetails.steps.length - 1 ? <button type="button" onClick={finishCooking}>Finish cooking ✓</button> : <button type="button" onClick={() => setCookingStep((step) => Math.min(selectedDetails.steps.length - 1, (step ?? 0) + 1))}>Next step →</button>}</div><small>Amounts in the recipe are adjusted for {selectedServings} serving{selectedServings === 1 ? "" : "s"}.</small></section>}
         </dialog>
       )}
+
+      {showShoppingList && <section className="shopping-panel" aria-labelledby="shopping-title"><button type="button" className="shopping-backdrop" aria-label="Close shopping list" onClick={() => setShowShoppingList(false)} /><aside><div className="shopping-heading"><div><p className="eyebrow">On this device</p><h2 id="shopping-title">Shopping list</h2></div><button type="button" onClick={() => setShowShoppingList(false)} aria-label="Close shopping list">×</button></div><form onSubmit={submitShoppingItem}><label className="sr-only" htmlFor="shopping-input">Add shopping item</label><input id="shopping-input" value={shoppingInput} maxLength={80} onChange={(event) => setShoppingInput(event.target.value)} placeholder="Add an item…" /><button type="submit" disabled={!shoppingInput.trim()}>Add</button></form>{shoppingItems.length ? <><ul>{shoppingItems.map((entry) => <li key={entry.item} className={entry.checked ? "checked" : ""}><label><input type="checkbox" checked={entry.checked} onChange={() => setShoppingItems((current) => current.map((item) => item.item === entry.item ? { ...item, checked: !item.checked } : item))} /><span>{entry.item}</span></label><button type="button" onClick={() => setShoppingItems((current) => current.filter((item) => item.item !== entry.item))} aria-label={`Remove ${entry.item}`}>×</button></li>)}</ul><div className="shopping-footer"><span>{shoppingItems.filter((item) => !item.checked).length} remaining</span><button type="button" onClick={() => setShoppingItems((current) => current.filter((item) => !item.checked))} disabled={!shoppingItems.some((item) => item.checked)}>Clear checked</button></div></> : <div className="shopping-empty"><strong>Your list is empty</strong><p>Add an item here or add missing ingredients from a recipe.</p></div>}</aside></section>}
     </main>
   );
 }

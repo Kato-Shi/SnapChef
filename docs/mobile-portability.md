@@ -41,6 +41,7 @@ Current gaps:
 - No native camera integration.
 - Ingredients and saved recipes persist on the current device. Uploaded photos and temporary search filters do not persist.
 - The 20 most recently viewed recipes and cooked status persist on the current device. Cooking progress and filter choices are session-only.
+- Shopping-list items and their checked state persist on the current device and remain shared by the browser and Android interface.
 - No safe-area layout handling for notches and system bars.
 - Some controls and modal dimensions need mobile touch and viewport refinement.
 - Build scripts use Unix-style environment-variable syntax and are not portable to Windows without a workaround.

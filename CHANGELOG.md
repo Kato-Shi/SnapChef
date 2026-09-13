@@ -2,6 +2,13 @@
 
 All notable product, recipe-catalog, platform, build, and deployment changes are recorded here.
 
+## 2026-09-13 — Simple shopping list
+
+- Added a compact shopping-list panel accessible from the site header.
+- Added manual items, check-off and remove actions, a remaining-item count, and clear-checked cleanup.
+- Added one-action transfer of a recipe’s missing ingredients without creating duplicates.
+- Stored the list locally on the current device so the prototype needs no account or backend.
+
 ## 2026-09-13 — Cooking tools, filters, and history
 
 - Added a full-screen cooking mode with step progress, large instructions, previous/next controls, and a completion action.

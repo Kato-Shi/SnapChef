@@ -30,6 +30,7 @@ test("server-renders the SnapChef experience", async () => {
   assert.match(html, /Recent/);
   assert.match(html, /30 min or less/);
   assert.match(html, /I have everything/);
+  assert.match(html, /Shopping list/);
   assert.doesNotMatch(html, /codex-preview|Building your site|react-loading-skeleton/i);
 });
 
