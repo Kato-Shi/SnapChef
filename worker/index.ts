@@ -35,12 +35,13 @@ function isRateLimited(request: Request) {
 }
 
 async function analyzeImage(request: Request, env: Env) {
-  const apiKey =
+  const rawKey =
     env.GEMINI_USE_API_KEY ||
     env.GEMINI_API_KEY ||
     (typeof process !== "undefined" && (process.env?.GEMINI_USE_API_KEY || process.env?.GEMINI_API_KEY)) ||
     env.OPENAI_API_KEY ||
     (typeof process !== "undefined" && process.env?.OPENAI_API_KEY);
+  const apiKey = rawKey?.trim();
   if (!apiKey) return json({ error: "Image recognition has not been configured yet." }, 503);
   if (isRateLimited(request)) return json({ error: "Hourly photo limit reached. Please try again later." }, 429);
   const form = await request.formData().catch(() => null);
@@ -52,71 +53,123 @@ async function analyzeImage(request: Request, env: Env) {
   const base64Data = btoa(binary);
 
   try {
-    const ai = new GoogleGenAI({
-      apiKey,
-      httpOptions: {
-        headers: {
-          "User-Agent": "aistudio-build",
-        },
-      },
-    });
-
-    const response = await ai.models.generateContent({
-      model: "gemini-3.8-flash",
-      contents: {
-        parts: [
-          {
-            inlineData: {
-              mimeType: "image/jpeg",
-              data: base64Data,
-            },
+    try {
+      const ai = new GoogleGenAI({
+        apiKey,
+        httpOptions: {
+          headers: {
+            "User-Agent": "aistudio-build",
           },
+        },
+      });
+
+      const response = await ai.models.generateContent({
+        model: "gemini-3.8-flash",
+        contents: {
+          parts: [
+            {
+              inlineData: {
+                mimeType: "image/jpeg",
+                data: base64Data,
+              },
+            },
+            {
+              text: "Identify the prepared dish in this photo. Give one candidate when clear, otherwise up to three plausible dishes ranked by likelihood. Also list only clearly visible or strongly implied main ingredients useful for recipe matching. Be conservative: never invent certainty, and say when this may not be food.",
+            },
+          ],
+        },
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              candidates: {
+                type: Type.ARRAY,
+                description: "Up to 3 dish candidates ranked by likelihood",
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    name: { type: Type.STRING },
+                    confidence: { type: Type.INTEGER, description: "Confidence score from 0 to 100" },
+                    reason: { type: Type.STRING },
+                  },
+                  required: ["name", "confidence", "reason"],
+                },
+              },
+              ingredients: {
+                type: Type.ARRAY,
+                description: "Visible or strongly implied main ingredients useful for recipe matching",
+                items: {
+                  type: Type.STRING,
+                },
+              },
+              message: {
+                type: Type.STRING,
+                description: "Brief explanation or description",
+              },
+            },
+            required: ["candidates", "ingredients", "message"],
+          },
+        },
+      });
+
+      const text = response.text;
+      if (text) return json(JSON.parse(text));
+    } catch (sdkError) {
+      console.warn("Gemini SDK call failed, falling back to direct REST fetch:", sdkError);
+    }
+
+    // Direct REST API fallback for Cloudflare Workers / Edge environments
+    const restUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${encodeURIComponent(apiKey)}`;
+    const restRes = await fetch(restUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [
           {
-            text: "Identify the prepared dish in this photo. Give one candidate when clear, otherwise up to three plausible dishes ranked by likelihood. Also list only clearly visible or strongly implied main ingredients useful for recipe matching. Be conservative: never invent certainty, and say when this may not be food.",
+            parts: [
+              {
+                inlineData: {
+                  mimeType: "image/jpeg",
+                  data: base64Data,
+                },
+              },
+              {
+                text: "Identify the prepared dish in this photo. Give one candidate when clear, otherwise up to three plausible dishes ranked by likelihood. Also list only clearly visible or strongly implied main ingredients useful for recipe matching. Be conservative: never invent certainty, and say when this may not be food.",
+              },
+            ],
           },
         ],
-      },
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            candidates: {
-              type: Type.ARRAY,
-              description: "Up to 3 dish candidates ranked by likelihood",
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  name: { type: Type.STRING },
-                  confidence: { type: Type.INTEGER, description: "Confidence score from 0 to 100" },
-                  reason: { type: Type.STRING },
-                },
-                required: ["name", "confidence", "reason"],
-              },
-            },
-            ingredients: {
-              type: Type.ARRAY,
-              description: "Visible or strongly implied main ingredients useful for recipe matching",
-              items: {
-                type: Type.STRING,
-              },
-            },
-            message: {
-              type: Type.STRING,
-              description: "Brief explanation or description",
-            },
-          },
-          required: ["candidates", "ingredients", "message"],
+        generationConfig: {
+          responseMimeType: "application/json",
         },
-      },
+      }),
     });
 
-    const text = response.text;
-    if (!text) return json({ error: "The image service returned an incomplete result." }, 502);
-    return json(JSON.parse(text));
-  } catch (error) {
+    const restData = (await restRes.json()) as {
+      candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
+      error?: { message?: string };
+    };
+
+    if (!restRes.ok || restData.error) {
+      const errMsg = restData.error?.message || `Gemini API returned status ${restRes.status}`;
+      console.error("Gemini REST API error:", errMsg);
+      return json({ error: errMsg }, 502);
+    }
+
+    const restText = restData.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (restText) {
+      return json(JSON.parse(restText));
+    }
+
+    return json({ error: "The image service returned an incomplete result." }, 502);
+  } catch (error: unknown) {
     console.error("Gemini image analysis failed", error);
-    return json({ error: "The image service is temporarily unavailable." }, 502);
+    let message = "The image service is temporarily unavailable.";
+    if (error && typeof error === "object" && "message" in error) {
+      message = String((error as { message: unknown }).message);
+    }
+    return json({ error: message }, 502);
   }
 }
 
