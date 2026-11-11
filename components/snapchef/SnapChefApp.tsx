@@ -9,7 +9,7 @@ import { recipes } from "../../app/lib/recipes";
 import { worldRecipes } from "../../app/lib/world-recipes";
 
 const worldRecipeIds = new Set(worldRecipes.map((recipe) => recipe.id));
-const imageRecognitionEnabled = import.meta.env?.VITE_IMAGE_RECOGNITION_ENABLED === "true";
+const imageRecognitionEnabled = import.meta.env?.VITE_IMAGE_RECOGNITION_ENABLED !== "false";
 const categories = ["All", "Filipino", "Global", "Quick", "Vegetarian", "Seafood", "Soups & stews", "Saved", "Recent"] as const;
 type Category = (typeof categories)[number];
 type DifficultyFilter = "Any" | "Easy" | "Moderate" | "Advanced";
@@ -176,7 +176,12 @@ export default function Home() {
       setIngredients((current) => Array.from(new Set([...current, ...result.ingredients.map(normalizeIngredient).filter(Boolean)])));
       setHasSearched(false);
     } catch (error) {
-      setNotice(error instanceof Error ? error.message : "The photo could not be analyzed.");
+      const msg = error instanceof Error ? error.message : "The photo could not be analyzed.";
+      if (msg.includes("not been configured yet")) {
+        setNotice("GEMINI_USE_API_KEY is not configured yet. Add your Gemini API key in Settings > Secrets (or .env) to enable live photo recognition.");
+      } else {
+        setNotice(msg);
+      }
     } finally { setAnalyzing(false); }
   };
   const findRecipes = () => {

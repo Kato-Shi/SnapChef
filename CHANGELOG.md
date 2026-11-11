@@ -2,6 +2,23 @@
 
 All notable product, recipe-catalog, platform, build, and deployment changes are recorded here.
 
+## 2026-11-11 — Google Gemini dish recognition integration
+
+- Integrated Google Gemini (`gemini-3.8-flash`) via `@google/genai` on the server-side `/api/analyze-image` endpoint.
+- Added multimodal image processing and structured JSON response schema enforcement for dish candidates, confidence scores, culinary reasoning, and detected ingredients.
+- Enabled dish recognition in the frontend UI (`SnapChefApp.tsx`), maintaining client-side photo resizing and hourly rate limiting.
+- Supported `GEMINI_USE_API_KEY`, `GEMINI_API_KEY`, and fallback `OPENAI_API_KEY` environment variables forwarded via worker binding vars.
+- Added explicit UI error notifications when API keys are not yet configured.
+- Updated documentation in `docs/image-recognition.md` and configuration variables in `.env.example`.
+
+## 2026-11-11 — AI Studio web runtime migration
+
+- Configured Vite development server bindings to host 0.0.0.0 and port 3000 with allowedHosts enabled.
+- Normalized package management configuration to npm, removing redundant lockfiles.
+- Added graceful database mock fallback for Drizzle D1 client when running outside Cloudflare worker bindings.
+- Created `metadata.json` and `.env.example` defining environment variables and application metadata.
+- Preserved existing browser and Android cross-platform capabilities and image analysis mock defaults.
+
 ## 2026-09-13 — Expanded popular global cuisines
 
 - Added 30 home-cookable dishes across Asian, Indian, American, Italian, Spanish, and Mexican cuisines.

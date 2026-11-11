@@ -14,6 +14,11 @@ const isCodexSeatbeltSandbox = process.env.CODEX_SANDBOX === "seatbelt";
 const localBindingConfig = {
   main: "./worker/index.ts",
   compatibility_flags: ["nodejs_compat"],
+  vars: {
+    GEMINI_USE_API_KEY: process.env.GEMINI_USE_API_KEY || "",
+    GEMINI_API_KEY: process.env.GEMINI_USE_API_KEY || process.env.GEMINI_API_KEY || "",
+    OPENAI_API_KEY: process.env.OPENAI_API_KEY || "",
+  },
   d1_databases: d1
     ? [
         {
@@ -42,11 +47,15 @@ export default defineConfig(async () => {
 
   // Wrangler snapshots its log path while the Cloudflare plugin is imported.
   const { cloudflare } = await import("@cloudflare/vite-plugin");
-
   return {
-    server: isCodexSeatbeltSandbox
-      ? { watch: { useFsEvents: false, usePolling: true } }
-      : undefined,
+    server: {
+      host: "0.0.0.0",
+      port: 3000,
+      allowedHosts: true,
+      ...(isCodexSeatbeltSandbox
+        ? { watch: { useFsEvents: false, usePolling: true } }
+        : {}),
+    },
     plugins: [
       vinext(),
       sites(),

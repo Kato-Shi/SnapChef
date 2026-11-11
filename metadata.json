@@ -1,0 +1,8 @@
+{
+  "name": "SnapChef",
+  "description": "Find recipes using the ingredients already in your kitchen.",
+  "permissions": [],
+  "capabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

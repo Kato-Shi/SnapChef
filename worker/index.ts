@@ -1,9 +1,12 @@
 /** Cloudflare Worker entry point for the vinext-starter template. */
 import { handleImageOptimization, DEFAULT_DEVICE_SIZES, DEFAULT_IMAGE_SIZES } from "vinext/server/image-optimization";
 import handler from "vinext/server/app-router-entry";
+import { GoogleGenAI, Type } from "@google/genai";
 
 interface Env {
   ASSETS: Fetcher;
+  GEMINI_USE_API_KEY?: string;
+  GEMINI_API_KEY?: string;
   OPENAI_API_KEY?: string;
   DB: D1Database;
   IMAGES: {
@@ -23,10 +26,6 @@ function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), { status, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store", "access-control-allow-origin": "*" } });
 }
 
-function responseText(result: { output_text?: string; output?: Array<{ content?: Array<{ text?: string }> }> }) {
-  return result.output_text || result.output?.flatMap((item) => item.content || []).map((item) => item.text || "").join("") || "";
-}
-
 function isRateLimited(request: Request) {
   const key = request.headers.get("cf-connecting-ip") || "local";
   const now = Date.now();
@@ -36,7 +35,13 @@ function isRateLimited(request: Request) {
 }
 
 async function analyzeImage(request: Request, env: Env) {
-  if (!env.OPENAI_API_KEY) return json({ error: "Image recognition has not been configured yet." }, 503);
+  const apiKey =
+    env.GEMINI_USE_API_KEY ||
+    env.GEMINI_API_KEY ||
+    (typeof process !== "undefined" && (process.env?.GEMINI_USE_API_KEY || process.env?.GEMINI_API_KEY)) ||
+    env.OPENAI_API_KEY ||
+    (typeof process !== "undefined" && process.env?.OPENAI_API_KEY);
+  if (!apiKey) return json({ error: "Image recognition has not been configured yet." }, 503);
   if (isRateLimited(request)) return json({ error: "Hourly photo limit reached. Please try again later." }, 429);
   const form = await request.formData().catch(() => null);
   const image = form?.get("image");
@@ -44,28 +49,75 @@ async function analyzeImage(request: Request, env: Env) {
   const bytes = new Uint8Array(await image.arrayBuffer());
   let binary = "";
   for (let index = 0; index < bytes.length; index += 0x8000) binary += String.fromCharCode(...bytes.subarray(index, index + 0x8000));
-  const response = await fetch("https://api.openai.com/v1/responses", {
-    method: "POST",
-    headers: { authorization: `Bearer ${env.OPENAI_API_KEY}`, "content-type": "application/json" },
-    body: JSON.stringify({
-      model: "gpt-5.6-luna", reasoning: { effort: "low" }, max_output_tokens: 350,
-      input: [{ role: "user", content: [
-        { type: "input_text", text: "Identify the prepared dish in this photo. Give one candidate when clear, otherwise up to three plausible dishes ranked by likelihood. Also list only clearly visible or strongly implied main ingredients useful for recipe matching. Be conservative: never invent certainty, and say when this may not be food." },
-        { type: "input_image", image_url: `data:image/jpeg;base64,${btoa(binary)}`, detail: "low" },
-      ] }],
-      text: { format: { type: "json_schema", name: "dish_identification", strict: true, schema: {
-        type: "object", additionalProperties: false,
-        properties: {
-          candidates: { type: "array", maxItems: 3, items: { type: "object", additionalProperties: false, properties: { name: { type: "string" }, confidence: { type: "integer", minimum: 0, maximum: 100 }, reason: { type: "string" } }, required: ["name", "confidence", "reason"] } },
-          ingredients: { type: "array", maxItems: 12, items: { type: "string" } }, message: { type: "string" },
-        }, required: ["candidates", "ingredients", "message"],
-      } } },
-    }),
-  });
-  const result = await response.json() as { output_text?: string; output?: Array<{ content?: Array<{ text?: string }> }>; error?: { message?: string } };
-  if (!response.ok) { console.error("Image analysis failed", response.status, result.error?.message); return json({ error: "The image service is temporarily unavailable." }, 502); }
-  try { return json(JSON.parse(responseText(result))); }
-  catch { return json({ error: "The image service returned an incomplete result." }, 502); }
+  const base64Data = btoa(binary);
+
+  try {
+    const ai = new GoogleGenAI({
+      apiKey,
+      httpOptions: {
+        headers: {
+          "User-Agent": "aistudio-build",
+        },
+      },
+    });
+
+    const response = await ai.models.generateContent({
+      model: "gemini-3.8-flash",
+      contents: {
+        parts: [
+          {
+            inlineData: {
+              mimeType: "image/jpeg",
+              data: base64Data,
+            },
+          },
+          {
+            text: "Identify the prepared dish in this photo. Give one candidate when clear, otherwise up to three plausible dishes ranked by likelihood. Also list only clearly visible or strongly implied main ingredients useful for recipe matching. Be conservative: never invent certainty, and say when this may not be food.",
+          },
+        ],
+      },
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            candidates: {
+              type: Type.ARRAY,
+              description: "Up to 3 dish candidates ranked by likelihood",
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  name: { type: Type.STRING },
+                  confidence: { type: Type.INTEGER, description: "Confidence score from 0 to 100" },
+                  reason: { type: Type.STRING },
+                },
+                required: ["name", "confidence", "reason"],
+              },
+            },
+            ingredients: {
+              type: Type.ARRAY,
+              description: "Visible or strongly implied main ingredients useful for recipe matching",
+              items: {
+                type: Type.STRING,
+              },
+            },
+            message: {
+              type: Type.STRING,
+              description: "Brief explanation or description",
+            },
+          },
+          required: ["candidates", "ingredients", "message"],
+        },
+      },
+    });
+
+    const text = response.text;
+    if (!text) return json({ error: "The image service returned an incomplete result." }, 502);
+    return json(JSON.parse(text));
+  } catch (error) {
+    console.error("Gemini image analysis failed", error);
+    return json({ error: "The image service is temporarily unavailable." }, 502);
+  }
 }
 
 interface ExecutionContext {
