@@ -52,86 +52,26 @@ async function analyzeImage(request: Request, env: Env) {
   for (let index = 0; index < bytes.length; index += 0x8000) binary += String.fromCharCode(...bytes.subarray(index, index + 0x8000));
   const base64Data = btoa(binary);
 
-  const models = ["gemini-2.5-flash", "gemini-3.8-flash", "gemini-3.1-flash-lite", "gemini-flash-latest"];
+  const models = ["gemini-3.8-flash", "gemini-3.1-flash-lite", "gemini-flash-latest"];
   let lastError = "The image service is temporarily unavailable.";
 
   for (const model of models) {
-    try {
-      // 1. Try SDK call
+    for (let attempt = 0; attempt < 2; attempt++) {
       try {
-        const ai = new GoogleGenAI({
-          apiKey,
-          httpOptions: {
-            headers: {
-              "User-Agent": "aistudio-build",
+        // 1. Try SDK call
+        try {
+          const ai = new GoogleGenAI({
+            apiKey,
+            httpOptions: {
+              headers: {
+                "User-Agent": "aistudio-build",
+              },
             },
-          },
-        });
+          });
 
-        const response = await ai.models.generateContent({
-          model,
-          contents: {
-            parts: [
-              {
-                inlineData: {
-                  mimeType: "image/jpeg",
-                  data: base64Data,
-                },
-              },
-              {
-                text: "Identify the prepared dish in this photo. Give one candidate when clear, otherwise up to three plausible dishes ranked by likelihood. Also list only clearly visible or strongly implied main ingredients useful for recipe matching. Be conservative: never invent certainty, and say when this may not be food.",
-              },
-            ],
-          },
-          config: {
-            responseMimeType: "application/json",
-            responseSchema: {
-              type: Type.OBJECT,
-              properties: {
-                candidates: {
-                  type: Type.ARRAY,
-                  description: "Up to 3 dish candidates ranked by likelihood",
-                  items: {
-                    type: Type.OBJECT,
-                    properties: {
-                      name: { type: Type.STRING },
-                      confidence: { type: Type.INTEGER, description: "Confidence score from 0 to 100" },
-                      reason: { type: Type.STRING },
-                    },
-                    required: ["name", "confidence", "reason"],
-                  },
-                },
-                ingredients: {
-                  type: Type.ARRAY,
-                  description: "Visible or strongly implied main ingredients useful for recipe matching",
-                  items: {
-                    type: Type.STRING,
-                  },
-                },
-                message: {
-                  type: Type.STRING,
-                  description: "Brief explanation or description",
-                },
-              },
-              required: ["candidates", "ingredients", "message"],
-            },
-          },
-        });
-
-        const text = response.text;
-        if (text) return json(JSON.parse(text));
-      } catch (sdkError: unknown) {
-        console.warn(`Gemini SDK call failed for ${model}, trying REST fallback:`, sdkError);
-      }
-
-      // 2. Direct REST API fallback for Cloudflare Workers / Edge environments
-      const restUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
-      const restRes = await fetch(restUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [
-            {
+          const response = await ai.models.generateContent({
+            model,
+            contents: {
               parts: [
                 {
                   inlineData: {
@@ -144,43 +84,109 @@ async function analyzeImage(request: Request, env: Env) {
                 },
               ],
             },
-          ],
-          generationConfig: {
-            responseMimeType: "application/json",
-          },
-        }),
-      });
+            config: {
+              responseMimeType: "application/json",
+              responseSchema: {
+                type: Type.OBJECT,
+                properties: {
+                  candidates: {
+                    type: Type.ARRAY,
+                    description: "Up to 3 dish candidates ranked by likelihood",
+                    items: {
+                      type: Type.OBJECT,
+                      properties: {
+                        name: { type: Type.STRING },
+                        confidence: { type: Type.INTEGER, description: "Confidence score from 0 to 100" },
+                        reason: { type: Type.STRING },
+                      },
+                      required: ["name", "confidence", "reason"],
+                    },
+                  },
+                  ingredients: {
+                    type: Type.ARRAY,
+                    description: "Visible or strongly implied main ingredients useful for recipe matching",
+                    items: {
+                      type: Type.STRING,
+                    },
+                  },
+                  message: {
+                    type: Type.STRING,
+                    description: "Brief explanation or description",
+                  },
+                },
+                required: ["candidates", "ingredients", "message"],
+              },
+            },
+          });
 
-      const restData = (await restRes.json()) as {
-        candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
-        error?: { message?: string };
-      };
-
-      if (!restRes.ok || restData.error) {
-        lastError = restData.error?.message || `Gemini API returned status ${restRes.status}`;
-        console.warn(`Model ${model} returned error:`, lastError);
-        // If high demand or overloaded, automatically fall back to the next model in the pool!
-        if (
-          lastError.includes("high demand") ||
-          lastError.includes("demand are usually temporary") ||
-          lastError.includes("Resource has been exhausted") ||
-          lastError.includes("overloaded") ||
-          restRes.status === 503 ||
-          restRes.status === 429
-        ) {
-          continue;
+          const text = response.text;
+          if (text) return json(JSON.parse(text));
+        } catch (sdkError: unknown) {
+          console.warn(`Gemini SDK call failed for ${model}:`, sdkError);
         }
-        return json({ error: lastError }, 502);
-      }
 
-      const restText = restData.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (restText) {
-        return json(JSON.parse(restText));
-      }
-    } catch (modelErr: unknown) {
-      console.warn(`Error running model ${model}:`, modelErr);
-      if (modelErr && typeof modelErr === "object" && "message" in modelErr) {
-        lastError = String((modelErr as { message: unknown }).message);
+        // 2. Direct REST API fallback for Cloudflare Workers / Edge environments
+        const restUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
+        const restRes = await fetch(restUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [
+              {
+                parts: [
+                  {
+                    inlineData: {
+                      mimeType: "image/jpeg",
+                      data: base64Data,
+                    },
+                  },
+                  {
+                    text: "Identify the prepared dish in this photo. Give one candidate when clear, otherwise up to three plausible dishes ranked by likelihood. Also list only clearly visible or strongly implied main ingredients useful for recipe matching. Be conservative: never invent certainty, and say when this may not be food.",
+                  },
+                ],
+              },
+            ],
+            generationConfig: {
+              responseMimeType: "application/json",
+            },
+          }),
+        });
+
+        const restData = (await restRes.json()) as {
+          candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
+          error?: { message?: string };
+        };
+
+        if (!restRes.ok || restData.error) {
+          lastError = restData.error?.message || `Gemini API returned status ${restRes.status}`;
+          console.warn(`Model ${model} attempt ${attempt + 1} returned error:`, lastError);
+
+          // If high demand or throttled, wait briefly and retry attempt, or fall through to next model
+          if (
+            lastError.includes("high demand") ||
+            lastError.includes("demand are usually temporary") ||
+            lastError.includes("Resource has been exhausted") ||
+            lastError.includes("overloaded") ||
+            restRes.status === 503 ||
+            restRes.status === 429
+          ) {
+            if (attempt === 0) {
+              await new Promise((resolve) => setTimeout(resolve, 800));
+              continue;
+            }
+          }
+          break; // proceed to next model in pool
+        }
+
+        const restText = restData.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (restText) {
+          return json(JSON.parse(restText));
+        }
+      } catch (modelErr: unknown) {
+        console.warn(`Error running model ${model}:`, modelErr);
+        if (modelErr && typeof modelErr === "object" && "message" in modelErr) {
+          lastError = String((modelErr as { message: unknown }).message);
+        }
       }
     }
   }

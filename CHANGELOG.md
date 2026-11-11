@@ -8,7 +8,7 @@ All notable product, recipe-catalog, platform, build, and deployment changes are
 - Added multimodal image processing and structured JSON response schema enforcement for dish candidates, confidence scores, culinary reasoning, and detected ingredients.
 - Enabled dish recognition in the frontend UI (`SnapChefApp.tsx`), maintaining client-side photo resizing and hourly rate limiting.
 - Supported `GEMINI_USE_API_KEY`, `GEMINI_API_KEY`, and fallback `OPENAI_API_KEY` environment variables forwarded via worker binding vars with automatic whitespace trimming.
-- Added direct Gemini REST API fallback, multi-model failover pool (`gemini-2.5-flash`, `gemini-3.8-flash`, `gemini-3.1-flash-lite`, `gemini-flash-latest`), and detailed error reporting for Edge/Cloudflare Workers environments.
+- Added direct Gemini REST API fallback, active model failover pool (`gemini-3.8-flash`, `gemini-3.1-flash-lite`, `gemini-flash-latest`) with transient retry logic, and detailed error reporting for Edge/Cloudflare Workers environments.
 - Added explicit UI error notifications when API keys are not yet configured.
 - Updated documentation in `docs/image-recognition.md` and configuration variables in `.env.example`.
 
